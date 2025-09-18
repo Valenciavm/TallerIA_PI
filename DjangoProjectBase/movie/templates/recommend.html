@@ -1,0 +1,38 @@
+{% extends 'base.html' %} 
+{% block content %}
+
+<div class="container">
+    <h1 class="mb-4">Recomendador de Películas 🎬</h1>
+
+    <!-- Formulario -->
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="prompt" class="form-label">Describe una película que quieras ver:</label>
+            <input type="text" 
+                   class="form-control" 
+                   name="prompt" 
+                   id="prompt" 
+                   value="{{ prompt|default:'' }}" 
+                   required>
+        </div>
+        <button type="submit" class="btn btn-primary">Recomendar</button>
+    </form>
+
+    <hr>
+
+    <!-- Resultado -->
+    {% if best_movie %}
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">{{ best_movie.title }}</h5>
+                <p class="card-text">{{ best_movie.description }}</p>
+                <p class="text-muted">Similitud: {{ score|floatformat:3 }}</p>
+            </div>
+        </div>
+    {% elif prompt %}
+        <p class="mt-4 text-danger">No se encontró ninguna película similar.</p>
+    {% endif %}
+</div>
+
+{% endblock content %}

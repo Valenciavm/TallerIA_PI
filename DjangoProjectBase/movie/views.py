@@ -8,6 +8,13 @@ import matplotlib
 import io
 import urllib, base64
 
+import os
+from dotenv import load_dotenv
+
+from openai import OpenAI
+
+import numpy as np
+
 def home(request):
     #return HttpResponse('<h1>Welcome to Home Page</h1>')
     #return render(request, 'home.html')
@@ -123,3 +130,49 @@ def generate_bar_chart(data, xlabel, ylabel):
     buffer.close()
     graphic = base64.b64encode(image_png).decode('utf-8')
     return graphic
+
+# Vista principal del recomendador
+def recommend_movie(request):
+    from dotenv import load_dotenv
+    import os
+    from openai import OpenAI
+
+    load_dotenv('../openAI.env')  
+    api_key = os.getenv("openai_apikey") 
+    client = OpenAI(api_key=api_key)
+
+    def get_embedding(text):
+        response = client.embeddings.create(
+            input=[text],
+            model="text-embedding-3-small"
+        )
+        return np.array(response.data[0].embedding, dtype=np.float32)
+
+    def cosine_similarity(a, b):
+        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+    if request.method == "POST":
+        prompt = request.POST.get("prompt")
+        prompt_emb = get_embedding(prompt)
+
+        best_movie, best_score = None, -1
+
+        # Buscar la película más parecida
+        for movie in Movie.objects.exclude(emb__isnull=True):
+            movie_emb = np.frombuffer(movie.emb, dtype=np.float32)
+            score = cosine_similarity(prompt_emb, movie_emb)
+            if score > best_score:
+                best_movie, best_score = movie, score
+
+        return render(request, "recommend.html", {
+            "prompt": prompt,
+            "best_movie": best_movie,
+            "score": best_score
+        })
+
+    # GET request → mostrar formulario vacío
+    return render(request, "recommend.html", {
+        "prompt": None,
+        "best_movie": None,
+        "score": None
+    })
